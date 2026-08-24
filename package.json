@@ -1,0 +1,38 @@
+{
+  "name": "agrotech",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm run dev -w backend",
+    "dev:frontend": "npm run dev -w frontend",
+    "build": "npm run build -w packages/shared && npm run build -w backend && npm run build -w frontend",
+    "build:shared": "npm run build -w packages/shared",
+    "lint": "npm run lint -w backend && npm run lint -w frontend",
+    "test": "npm run test -w backend",
+    "db:migrate": "npm run db:migrate -w backend",
+    "db:seed": "npm run db:seed -w backend",
+    "db:generate": "npm run db:generate -w backend",
+    "format": "prettier --write \"**/*.{ts,tsx,json,css}\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "prettier": "^3.2.5",
+    "typescript": "^5.4.5"
+  },
+  "overrides": {
+    "lodash": "4.17.21"
+  },
+  "allowScripts": {
+    "@nestjs/core@10.4.22": true,
+    "@prisma/client": true,
+    "@prisma/engines": true,
+    "prisma": true,
+    "msgpackr-extract": true
+  }
+}

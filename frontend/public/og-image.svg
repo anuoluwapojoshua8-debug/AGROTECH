@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect fill="#16a34a" width="1200" height="630"/>
+  <circle cx="600" cy="315" r="200" fill="rgba(255,255,255,0.1)"/>
+  <text x="600" y="290" font-family="Arial" font-size="72" fill="white" text-anchor="middle" font-weight="bold">AgroTech</text>
+  <text x="600" y="350" font-family="Arial" font-size="28" fill="rgba(255,255,255,0.8)" text-anchor="middle">Fresh From Farm to Your Table</text>
+</svg>
