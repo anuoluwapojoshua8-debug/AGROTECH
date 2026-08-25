@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import apiClient from "@/lib/api-client";
 
 export interface Product {
@@ -145,5 +145,48 @@ export function useSearchProducts(query: string, options?: { enabled?: boolean }
       return data.items;
     },
     enabled: options?.enabled ?? query.length >= 2,
+  });
+}
+
+export interface CreateProductInput {
+  categoryId: string;
+  name: string;
+  description: string;
+  price: number;
+  comparePrice?: number;
+  quantity?: number;
+  unit?: string;
+  images?: string[];
+  tags?: string[];
+  deliveryTime?: string;
+  origin?: string;
+  isOrganic?: boolean;
+  isFresh?: boolean;
+  isFrozen?: boolean;
+}
+
+export function useCreateProduct() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: CreateProductInput) => {
+      const res = await apiClient.post("/products", data);
+      return unwrap<Product>(res);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+}
+
+export function useUploadProductImages() {
+  return useMutation({
+    mutationFn: async (files: File[]) => {
+      const formData = new FormData();
+      files.forEach((file) => formData.append("files", file));
+      const res = await apiClient.post("/upload/product", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return res.data.data as string[];
+    },
   });
 }

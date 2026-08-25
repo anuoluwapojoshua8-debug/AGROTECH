@@ -8,7 +8,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { productSchema, type ProductInput } from "@/lib/validations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -26,19 +25,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useDropzone } from "react-dropzone";
-import { X, Upload, ImagePlus } from "lucide-react";
+import { X, Upload, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-
-const categories = [
-  { value: "fresh-vegetables", label: "Fresh Vegetables" },
-  { value: "organic-fruits", label: "Organic Fruits" },
-  { value: "meat-poultry", label: "Meat & Poultry" },
-  { value: "dairy-eggs", label: "Dairy & Eggs" },
-  { value: "fresh-fish", label: "Fresh Fish" },
-  { value: "grains-staples", label: "Grains & Staples" },
-  { value: "beverages", label: "Beverages" },
-];
+import { useCategories } from "@/hooks/use-categories";
+import { useCreateProduct, useUploadProductImages } from "@/hooks/use-products";
 
 const units = [
   { value: "kg", label: "Kilogram (kg)" },
@@ -57,6 +48,10 @@ export default function NewProductPage() {
   const router = useRouter();
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
+
+  const { data: categories, isLoading: categoriesLoading } = useCategories();
+  const createProduct = useCreateProduct();
+  const uploadImages = useUploadProductImages();
 
   const form = useForm<ProductInput>({
     resolver: zodResolver(productSchema),
@@ -99,12 +94,32 @@ export default function NewProductPage() {
 
   const onSubmit = async (data: ProductInput) => {
     try {
-      // Simulate API call
-      await new Promise((r) => setTimeout(r, 1500));
+      let imageUrls: string[] = [];
+
+      if (files.length > 0) {
+        imageUrls = await uploadImages.mutateAsync(files);
+      }
+
+      const selectedCategory = categories?.find((c) => c.slug === data.category || c.id === data.category);
+
+      await createProduct.mutateAsync({
+        categoryId: selectedCategory?.id || data.category,
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        comparePrice: data.comparePrice || undefined,
+        quantity: data.quantity || undefined,
+        unit: data.unit || undefined,
+        images: imageUrls,
+        tags: data.tags || [],
+        deliveryTime: data.deliveryTime,
+        origin: data.origin,
+      });
+
       toast.success("Product created!", { description: "Your product has been listed successfully." });
       router.push("/dashboard/seller/products");
     } catch (error: any) {
-      toast.error("Failed to create product", { description: error?.message || "Something went wrong." });
+      toast.error("Failed to create product", { description: error?.response?.data?.message || error?.message || "Something went wrong." });
     }
   };
 
@@ -117,7 +132,6 @@ export default function NewProductPage() {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          {/* Images */}
           <div className="rounded-2xl border bg-card p-6">
             <h2 className="mb-4 font-semibold">Product Images</h2>
             <div
@@ -150,7 +164,6 @@ export default function NewProductPage() {
             )}
           </div>
 
-          {/* Basic Info */}
           <div className="rounded-2xl border bg-card p-6 space-y-4">
             <h2 className="font-semibold">Basic Information</h2>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -167,12 +180,12 @@ export default function NewProductPage() {
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
+                        <SelectValue placeholder={categoriesLoading ? "Loading categories..." : "Select category"} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {categories.map((c) => (
-                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                      {categories?.map((c) => (
+                        <SelectItem key={c.id} value={c.slug}>{c.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -195,7 +208,6 @@ export default function NewProductPage() {
             )} />
           </div>
 
-          {/* Pricing & Stock */}
           <div className="rounded-2xl border bg-card p-6 space-y-4">
             <h2 className="font-semibold">Pricing & Stock</h2>
             <div className="grid gap-4 sm:grid-cols-3">
@@ -241,7 +253,6 @@ export default function NewProductPage() {
             )} />
           </div>
 
-          {/* Tags & Details */}
           <div className="rounded-2xl border bg-card p-6 space-y-4">
             <h2 className="font-semibold">Product Details</h2>
             <FormField control={form.control} name="tags" render={({ field }) => (
@@ -289,7 +300,10 @@ export default function NewProductPage() {
           </div>
 
           <div className="flex gap-3">
-            <Button type="submit" size="lg" className="flex-1">Create Product</Button>
+            <Button type="submit" size="lg" className="flex-1" disabled={createProduct.isPending || uploadImages.isPending}>
+              {(createProduct.isPending || uploadImages.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {uploadImages.isPending ? "Uploading images..." : createProduct.isPending ? "Creating product..." : "Create Product"}
+            </Button>
             <Button type="button" variant="outline" size="lg" onClick={() => router.back()}>Cancel</Button>
           </div>
         </form>
