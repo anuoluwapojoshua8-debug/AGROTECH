@@ -2,16 +2,34 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/dashboard/data-table";
 import { formatPrice } from "@/lib/utils";
 import { useSellerProducts } from "@/hooks/use-seller";
-import { Plus, Eye, Pencil, Trash2 } from "lucide-react";
+import { useDeleteProduct } from "@/hooks/use-products";
+import { Plus, Eye, Pencil, Trash2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function SellerProductsPage() {
   const { data, isLoading } = useSellerProducts();
   const products = data?.items ?? [];
+  const deleteProduct = useDeleteProduct();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+    setDeletingId(id);
+    try {
+      await deleteProduct.mutateAsync(id);
+      toast.success("Product deleted");
+    } catch {
+      toast.error("Failed to delete product");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const columns = [
     {
@@ -40,8 +58,18 @@ export default function SellerProductsPage() {
           <Button variant="ghost" size="icon-sm" asChild>
             <Link href={`/products/${p.slug}`}><Eye className="h-4 w-4" /></Link>
           </Button>
-          <Button variant="ghost" size="icon-sm"><Pencil className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="icon-sm" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon-sm" asChild>
+            <Link href={`/dashboard/seller/products/${p.id}/edit`}><Pencil className="h-4 w-4" /></Link>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="text-destructive"
+            onClick={() => handleDelete(p.id, p.name)}
+            disabled={deletingId === p.id}
+          >
+            {deletingId === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+          </Button>
         </div>
       ),
     },

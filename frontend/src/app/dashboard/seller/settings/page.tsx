@@ -5,19 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getInitials } from "@/lib/utils";
 import { useBuyerProfile, useUpdateProfile, useChangePassword } from "@/hooks/use-buyer";
-import { useSellerProfile, useUpdateSellerProfile } from "@/hooks/use-seller";
+import { useSellerProfile, useUpdateSellerProfile, useUpdateBankDetails } from "@/hooks/use-seller";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Loader2 } from "lucide-react";
 
 export default function SellerSettingsPage() {
   const { data: profile, isLoading } = useBuyerProfile();
   const { data: merchantProfile } = useSellerProfile();
   const updateProfile = useUpdateProfile();
   const updateMerchant = useUpdateSellerProfile();
+  const updateBank = useUpdateBankDetails();
   const changePassword = useChangePassword();
 
   const [form, setForm] = useState({ firstName: "", lastName: "", phone: "", businessName: "", businessAddress: "", description: "" });
@@ -37,6 +38,16 @@ export default function SellerSettingsPage() {
     }
   }, [profile, merchantProfile]);
 
+  useEffect(() => {
+    if (merchantProfile?.bankDetails) {
+      setBankForm({
+        bankName: merchantProfile.bankDetails.bankName || "",
+        accountNumber: merchantProfile.bankDetails.accountNumber || "",
+        accountName: merchantProfile.bankDetails.accountName || "",
+      });
+    }
+  }, [merchantProfile]);
+
   const handleSaveProfile = async () => {
     try {
       await updateProfile.mutateAsync({ firstName: form.firstName, lastName: form.lastName, phone: form.phone });
@@ -54,6 +65,15 @@ export default function SellerSettingsPage() {
       setPasswordForm({ currentPassword: "", newPassword: "" });
     } catch {
       toast.error("Failed to update password");
+    }
+  };
+
+  const handleSaveBank = async () => {
+    try {
+      await updateBank.mutateAsync(bankForm);
+      toast.success("Banking info saved!");
+    } catch {
+      toast.error("Failed to save banking info");
     }
   };
 
@@ -124,11 +144,27 @@ export default function SellerSettingsPage() {
             </div>
             <Button className="mt-6" onClick={handleSaveProfile} loading={updateProfile.isPending || updateMerchant.isPending}>Save Changes</Button>
           </div>
+
+          <div className="rounded-2xl border bg-card p-6">
+            <h2 className="mb-4 font-semibold">Change Password</h2>
+            <div className="space-y-4 max-w-md">
+              <div>
+                <Label>Current Password</Label>
+                <Input type="password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} />
+              </div>
+              <div>
+                <Label>New Password</Label>
+                <Input type="password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} />
+              </div>
+              <Button onClick={handleSavePassword} loading={changePassword.isPending}>Update Password</Button>
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="banking" className="pt-6">
           <div className="rounded-2xl border bg-card p-6 space-y-4">
             <h2 className="font-semibold">Bank Account Details</h2>
+            <p className="text-sm text-muted-foreground">Used for withdrawals and payouts</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Bank Name</Label>
@@ -143,7 +179,10 @@ export default function SellerSettingsPage() {
               <Label>Account Name</Label>
               <Input value={bankForm.accountName} onChange={(e) => setBankForm({ ...bankForm, accountName: e.target.value })} placeholder="Enter account name" />
             </div>
-            <Button onClick={() => toast.success("Banking info saved!")}>Save Banking Info</Button>
+            <Button onClick={handleSaveBank} disabled={updateBank.isPending}>
+              {updateBank.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Banking Info
+            </Button>
           </div>
         </TabsContent>
       </Tabs>

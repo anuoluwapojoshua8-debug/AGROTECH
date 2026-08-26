@@ -212,6 +212,20 @@ export function useUpdateSellerProfile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["seller-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["seller-profile"] });
+    },
+  });
+}
+
+export function useUpdateBankDetails() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { bankName: string; accountNumber: string; accountName: string }) => {
+      const res = await apiClient.put("/merchants/profile", { bankDetails: data });
+      return unwrap<any>(res);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["seller-profile"] });
     },
   });
 }
