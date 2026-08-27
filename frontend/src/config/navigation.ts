@@ -18,6 +18,8 @@ export const mainNav: NavItem[] = [
 export const buyerNav: NavItem[] = [
   { title: "Dashboard", href: "/dashboard/buyer", icon: "LayoutDashboard" },
   { title: "My Orders", href: "/dashboard/buyer/orders", icon: "ShoppingBag" },
+  { title: "Addresses", href: "/dashboard/buyer/addresses", icon: "MapPin" },
+  { title: "Support", href: "/dashboard/buyer/support", icon: "Headphones" },
   { title: "Settings", href: "/dashboard/buyer/settings", icon: "Settings" },
 ];
 

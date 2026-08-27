@@ -23,6 +23,7 @@ import { WalletModule } from './modules/wallet/wallet.module';
 import { CouponsModule } from './modules/coupons/coupons.module';
 import { ReferralsModule } from './modules/referrals/referrals.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { SupportModule } from './modules/support/support.module';
 
 @Module({
   controllers: [AppController],
@@ -55,6 +56,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
     CouponsModule,
     ReferralsModule,
     AnalyticsModule,
+    SupportModule,
   ],
 })
 export class AppModule {}

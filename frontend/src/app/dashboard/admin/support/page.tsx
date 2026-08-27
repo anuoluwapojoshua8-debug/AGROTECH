@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/dashboard/data-table";
 import { formatDateTime } from "@/lib/utils";
 import { MessageSquare, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import { useAdminTickets, useAdminTicketStats, useUpdateTicketStatus, type SupportTicket } from "@/hooks/use-support";
 import {
   Select,
   SelectContent,
@@ -12,118 +13,45 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
 
-interface SupportTicket {
-  id: string;
-  subject: string;
-  customer: string;
-  category: string;
-  status: "open" | "in_progress" | "resolved" | "closed";
-  priority: "low" | "medium" | "high" | "urgent";
-  createdAt: string;
-  lastReply: string;
-  messages: number;
-}
-
-const mockTickets: SupportTicket[] = [
-  {
-    id: "TKT-001",
-    subject: "Order not delivered on time",
-    customer: "Adaeze Okonkwo",
-    category: "Delivery",
-    status: "open",
-    priority: "high",
-    createdAt: "2025-01-15T10:30:00Z",
-    lastReply: "2025-01-15T11:45:00Z",
-    messages: 3,
-  },
-  {
-    id: "TKT-002",
-    subject: "Wrong item received",
-    customer: "Emeka Nwankwo",
-    category: "Order Issue",
-    status: "in_progress",
-    priority: "medium",
-    createdAt: "2025-01-14T14:20:00Z",
-    lastReply: "2025-01-15T09:10:00Z",
-    messages: 5,
-  },
-  {
-    id: "TKT-003",
-    subject: "Refund request for cancelled order",
-    customer: "Fatima Abubakar",
-    category: "Refund",
-    status: "resolved",
-    priority: "medium",
-    createdAt: "2025-01-13T08:00:00Z",
-    lastReply: "2025-01-14T16:30:00Z",
-    messages: 4,
-  },
-  {
-    id: "TKT-004",
-    subject: "Cannot login to account",
-    customer: "Tunde Bakare",
-    category: "Account",
-    status: "open",
-    priority: "urgent",
-    createdAt: "2025-01-15T12:00:00Z",
-    lastReply: "2025-01-15T12:05:00Z",
-    messages: 1,
-  },
-  {
-    id: "TKT-005",
-    subject: "Product quality complaint",
-    customer: "Ngozi Eze",
-    category: "Quality",
-    status: "closed",
-    priority: "low",
-    createdAt: "2025-01-10T09:15:00Z",
-    lastReply: "2025-01-12T14:20:00Z",
-    messages: 6,
-  },
-  {
-    id: "TKT-006",
-    subject: "Payment failed but money deducted",
-    customer: "Oluwaseun Adeyemi",
-    category: "Payment",
-    status: "open",
-    priority: "urgent",
-    createdAt: "2025-01-15T13:45:00Z",
-    lastReply: "2025-01-15T13:50:00Z",
-    messages: 2,
-  },
-  {
-    id: "TKT-007",
-    subject: "How to become a seller",
-    customer: "Blessing Okoro",
-    category: "General",
-    status: "resolved",
-    priority: "low",
-    createdAt: "2025-01-11T11:00:00Z",
-    lastReply: "2025-01-11T14:00:00Z",
-    messages: 3,
-  },
-];
+const statusStyles: Record<string, "default" | "secondary" | "destructive" | "success" | "warning" | "info"> = {
+  OPEN: "warning",
+  IN_PROGRESS: "info",
+  RESOLVED: "success",
+  CLOSED: "secondary",
+};
 
 const priorityStyles: Record<string, "default" | "secondary" | "destructive" | "success" | "warning" | "info"> = {
-  low: "secondary",
-  medium: "default",
-  high: "warning",
-  urgent: "destructive",
+  LOW: "secondary",
+  MEDIUM: "default",
+  HIGH: "warning",
+  URGENT: "destructive",
 };
 
 export default function AdminSupportPage() {
-  const [tickets, setTickets] = useState<SupportTicket[]>(mockTickets);
+  const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const { data, isLoading } = useAdminTickets(page, statusFilter);
+  const { data: stats } = useAdminTicketStats();
+  const updateStatus = useUpdateTicketStatus();
 
-  const updateStatus = (id: string, status: SupportTicket["status"]) => {
-    setTickets((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)));
+  const tickets = data?.items ?? [];
+
+  const handleStatusChange = async (ticket: SupportTicket, status: string) => {
+    try {
+      await updateStatus.mutateAsync({ id: ticket.id, status });
+      toast.success(`Ticket ${ticket.ticketNumber} marked ${status.toLowerCase()}`);
+    } catch {
+      toast.error("Failed to update ticket status");
+    }
   };
 
   const columns = [
     {
-      key: "id",
+      key: "ticketNumber",
       header: "Ticket",
-      cell: (t: SupportTicket) => <span className="font-medium font-mono text-sm">{t.id}</span>,
+      cell: (t: SupportTicket) => <span className="font-medium font-mono text-sm">{t.ticketNumber}</span>,
     },
     {
       key: "subject",
@@ -136,14 +64,17 @@ export default function AdminSupportPage() {
       ),
     },
     {
-      key: "customer",
+      key: "user",
       header: "Customer",
       cell: (t: SupportTicket) => (
         <div className="flex items-center gap-2">
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-medium">
-            {t.customer.split(" ").map(n => n[0]).join("")}
+            {t.user ? `${t.user.firstName[0]}${t.user.lastName[0]}` : "?"}
           </div>
-          <span className="text-sm">{t.customer}</span>
+          <div>
+            <span className="text-sm">{t.user ? `${t.user.firstName} ${t.user.lastName}` : "Unknown"}</span>
+            {t.user?.email && <p className="text-xs text-muted-foreground">{t.user.email}</p>}
+          </div>
         </div>
       ),
     },
@@ -152,7 +83,7 @@ export default function AdminSupportPage() {
       header: "Priority",
       cell: (t: SupportTicket) => (
         <Badge variant={priorityStyles[t.priority]} className="capitalize">
-          {t.priority}
+          {t.priority.toLowerCase()}
         </Badge>
       ),
     },
@@ -160,15 +91,15 @@ export default function AdminSupportPage() {
       key: "status",
       header: "Status",
       cell: (t: SupportTicket) => (
-        <Select value={t.status} onValueChange={(v) => updateStatus(t.id, v as SupportTicket["status"])}>
+        <Select value={t.status} onValueChange={(v) => handleStatusChange(t, v)} disabled={updateStatus.isPending}>
           <SelectTrigger className="h-8 w-[130px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="open">Open</SelectItem>
-            <SelectItem value="in_progress">In Progress</SelectItem>
-            <SelectItem value="resolved">Resolved</SelectItem>
-            <SelectItem value="closed">Closed</SelectItem>
+            <SelectItem value="OPEN">Open</SelectItem>
+            <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+            <SelectItem value="RESOLVED">Resolved</SelectItem>
+            <SelectItem value="CLOSED">Closed</SelectItem>
           </SelectContent>
         </Select>
       ),
@@ -179,7 +110,7 @@ export default function AdminSupportPage() {
       cell: (t: SupportTicket) => (
         <div className="flex items-center gap-1 text-sm text-muted-foreground">
           <MessageSquare className="h-3.5 w-3.5" />
-          {t.messages}
+          {t._count?.messages ?? 0}
         </div>
       ),
     },
@@ -190,9 +121,12 @@ export default function AdminSupportPage() {
     },
   ];
 
-  const openCount = tickets.filter((t) => t.status === "open" || t.status === "in_progress").length;
-  const urgentCount = tickets.filter((t) => t.priority === "urgent" && t.status !== "closed" && t.status !== "resolved").length;
-  const resolvedCount = tickets.filter((t) => t.status === "resolved" || t.status === "closed").length;
+  const statCards = [
+    { label: "Open", value: stats?.open ?? 0, icon: AlertCircle, color: "bg-yellow-50 text-yellow-600 dark:bg-yellow-950 dark:text-yellow-400" },
+    { label: "In Progress", value: stats?.inProgress ?? 0, icon: Clock, color: "bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400" },
+    { label: "Resolved", value: stats?.resolved ?? 0, icon: CheckCircle, color: "bg-green-50 text-green-600 dark:bg-green-950 dark:text-green-400" },
+    { label: "Urgent/High", value: stats?.urgentHigh ?? 0, icon: AlertCircle, color: "bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400" },
+  ];
 
   return (
     <div>
@@ -201,47 +135,43 @@ export default function AdminSupportPage() {
         <p className="text-sm text-muted-foreground">Manage customer support requests</p>
       </div>
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border bg-card p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-yellow-50 text-yellow-600 dark:bg-yellow-950 dark:text-yellow-400">
-              <AlertCircle className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{openCount}</p>
-              <p className="text-xs text-muted-foreground">Open Tickets</p>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-2xl border bg-card p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400">
-              <Clock className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{urgentCount}</p>
-              <p className="text-xs text-muted-foreground">Urgent</p>
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {statCards.map((card) => (
+          <div key={card.label} className="rounded-2xl border bg-card p-4">
+            <div className="flex items-center gap-3">
+              <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${card.color}`}>
+                <card.icon className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{card.value}</p>
+                <p className="text-xs text-muted-foreground">{card.label}</p>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="rounded-2xl border bg-card p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 text-green-600 dark:bg-green-950 dark:text-green-400">
-              <CheckCircle className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{resolvedCount}</p>
-              <p className="text-xs text-muted-foreground">Resolved</p>
-            </div>
-          </div>
-        </div>
+        ))}
+      </div>
+
+      <div className="mb-4 flex items-center gap-2">
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+          <SelectTrigger className="h-9 w-[160px]">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="OPEN">Open</SelectItem>
+            <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+            <SelectItem value="RESOLVED">Resolved</SelectItem>
+            <SelectItem value="CLOSED">Closed</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <DataTable
         columns={columns}
         data={tickets}
         searchable
-        searchKeys={["subject", "customer", "id", "category"]}
+        searchKeys={["subject", "ticketNumber", "category"]}
+        loading={isLoading}
       />
     </div>
   );
