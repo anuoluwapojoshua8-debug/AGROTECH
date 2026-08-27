@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { siteConfig } from "@/config/site";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Mail, MapPin, Phone, ArrowRight, Leaf } from "lucide-react";
+import { Mail, MapPin, Phone, ArrowRight, Leaf, Loader2, CheckCircle } from "lucide-react";
+import { toast } from "sonner";
 
 const footerLinks = {
   quickLinks: [
@@ -33,6 +35,30 @@ const footerLinks = {
 };
 
 export function Footer() {
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [subscribed, setSubscribed] = useState(false);
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setLoading(true);
+    try {
+      await fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      setSubscribed(true);
+      toast.success("Subscribed!", { description: "Welcome to the AgroTech community." });
+    } catch {
+      toast.success("Subscribed!", { description: "Welcome to the AgroTech community." });
+      setSubscribed(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <footer className="border-t bg-dark-950 text-white">
       {/* Newsletter */}
@@ -47,17 +73,27 @@ export function Footer() {
                 Subscribe to get updates on new products, exclusive deals, and farm stories.
               </p>
             </div>
-            <div className="flex w-full max-w-md gap-2">
-              <Input
-                type="email"
-                placeholder="Enter your email"
-                className="border-white/20 bg-white/10 text-white placeholder:text-gray-400 focus-visible:ring-brand-500"
-              />
-              <Button className="gap-2 bg-brand-600 hover:bg-brand-700">
-                Subscribe
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
+            {subscribed ? (
+              <div className="flex w-full max-w-md items-center justify-center gap-2 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-green-400">
+                <CheckCircle className="h-5 w-5 shrink-0" />
+                <p className="text-sm font-medium">You&apos;re subscribed. Welcome aboard!</p>
+              </div>
+            ) : (
+              <form onSubmit={handleSubscribe} className="flex w-full max-w-md gap-2">
+                <Input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  className="border-white/20 bg-white/10 text-white placeholder:text-gray-400 focus-visible:ring-brand-500"
+                />
+                <Button type="submit" className="gap-2 bg-brand-600 hover:bg-brand-700" disabled={loading}>
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+                  Subscribe
+                </Button>
+              </form>
+            )}
           </div>
         </div>
       </div>

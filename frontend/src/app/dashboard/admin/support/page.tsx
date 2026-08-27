@@ -2,10 +2,16 @@
 
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/dashboard/data-table";
 import { formatDateTime } from "@/lib/utils";
-import { MessageSquare, Clock, CheckCircle, AlertCircle, User } from "lucide-react";
+import { MessageSquare, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface SupportTicket {
   id: string;
@@ -99,13 +105,6 @@ const mockTickets: SupportTicket[] = [
   },
 ];
 
-const statusStyles: Record<string, "default" | "secondary" | "destructive" | "success" | "warning" | "info"> = {
-  open: "warning",
-  in_progress: "info",
-  resolved: "success",
-  closed: "secondary",
-};
-
 const priorityStyles: Record<string, "default" | "secondary" | "destructive" | "success" | "warning" | "info"> = {
   low: "secondary",
   medium: "default",
@@ -114,7 +113,11 @@ const priorityStyles: Record<string, "default" | "secondary" | "destructive" | "
 };
 
 export default function AdminSupportPage() {
-  const [tickets] = useState<SupportTicket[]>(mockTickets);
+  const [tickets, setTickets] = useState<SupportTicket[]>(mockTickets);
+
+  const updateStatus = (id: string, status: SupportTicket["status"]) => {
+    setTickets((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)));
+  };
 
   const columns = [
     {
@@ -157,9 +160,17 @@ export default function AdminSupportPage() {
       key: "status",
       header: "Status",
       cell: (t: SupportTicket) => (
-        <Badge variant={statusStyles[t.status]} className="capitalize">
-          {t.status.replace("_", " ")}
-        </Badge>
+        <Select value={t.status} onValueChange={(v) => updateStatus(t.id, v as SupportTicket["status"])}>
+          <SelectTrigger className="h-8 w-[130px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="open">Open</SelectItem>
+            <SelectItem value="in_progress">In Progress</SelectItem>
+            <SelectItem value="resolved">Resolved</SelectItem>
+            <SelectItem value="closed">Closed</SelectItem>
+          </SelectContent>
+        </Select>
       ),
     },
     {
@@ -173,14 +184,15 @@ export default function AdminSupportPage() {
       ),
     },
     {
-      key: "lastReply",
-      header: "Last Reply",
-      cell: (t: SupportTicket) => <span className="text-sm text-muted-foreground">{formatDateTime(t.lastReply)}</span>,
+      key: "createdAt",
+      header: "Created",
+      cell: (t: SupportTicket) => <span className="text-sm text-muted-foreground">{formatDateTime(t.createdAt)}</span>,
     },
   ];
 
-  const openCount = tickets.filter((t) => t.status === "open").length;
+  const openCount = tickets.filter((t) => t.status === "open" || t.status === "in_progress").length;
   const urgentCount = tickets.filter((t) => t.priority === "urgent" && t.status !== "closed" && t.status !== "resolved").length;
+  const resolvedCount = tickets.filter((t) => t.status === "resolved" || t.status === "closed").length;
 
   return (
     <div>
@@ -218,7 +230,7 @@ export default function AdminSupportPage() {
               <CheckCircle className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{tickets.filter((t) => t.status === "resolved" || t.status === "closed").length}</p>
+              <p className="text-2xl font-bold">{resolvedCount}</p>
               <p className="text-xs text-muted-foreground">Resolved</p>
             </div>
           </div>
