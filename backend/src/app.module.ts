@@ -24,6 +24,7 @@ import { CouponsModule } from './modules/coupons/coupons.module';
 import { ReferralsModule } from './modules/referrals/referrals.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { SupportModule } from './modules/support/support.module';
+import { MailModule } from './modules/mail/mail.module';
 
 @Module({
   controllers: [AppController],
@@ -57,6 +58,7 @@ import { SupportModule } from './modules/support/support.module';
     ReferralsModule,
     AnalyticsModule,
     SupportModule,
+    MailModule,
   ],
 })
 export class AppModule {}

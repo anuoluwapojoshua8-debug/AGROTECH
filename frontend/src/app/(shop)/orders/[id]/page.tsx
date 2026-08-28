@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { PageLoading } from "@/components/shared/loading";
-import { useOrder } from "@/hooks/use-orders";
+import { useOrder, useUpdateOrderStatus } from "@/hooks/use-orders";
 import { useCreateReview } from "@/hooks/use-reviews";
+import { useDeliveryByOrder } from "@/hooks/use-delivery";
 import { formatPrice, formatDateTime } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -84,6 +85,27 @@ export default function OrderDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const { data: order, isLoading } = useOrder(id);
+  const { data: delivery } = useDeliveryByOrder(id);
+  const updateStatus = useUpdateOrderStatus();
+
+  const handleRequestReturn = async () => {
+    if (!confirm("Request return/refund for this delivered order?")) return;
+    try {
+      await updateStatus.mutateAsync({ orderId: order!.id, status: "RETURNED" });
+      toast.success("Return requested — admin will review refund");
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || "Failed to request return");
+    }
+  };
+
+  const handleCancel = async () => {
+    try {
+      await updateStatus.mutateAsync({ orderId: order!.id, status: "CANCELLED" });
+      toast.success("Order cancelled");
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || "Cannot cancel at this stage");
+    }
+  };
 
   if (isLoading || !order) return <PageLoading />;
 
@@ -114,9 +136,26 @@ export default function OrderDetailPage() {
               Placed on {formatDateTime(order.createdAt)}
             </p>
           </div>
-          <Badge variant={order.status.toLowerCase() === "delivered" ? "success" : "info"} className="w-fit text-sm px-3 py-1">
-            {order.status}
-          </Badge>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant={order.status.toLowerCase() === "delivered" ? "success" : order.status === "returned" ? "destructive" : "info"} className="w-fit text-sm px-3 py-1">
+              {order.status}
+            </Badge>
+            {["PENDING", "CONFIRMED", "PROCESSING"].includes(order.status) && (
+              <Button variant="outline" size="sm" onClick={handleCancel} disabled={updateStatus.isPending}>
+                Cancel Order
+              </Button>
+            )}
+            {order.status === "DELIVERED" && (
+              <Button variant="outline" size="sm" onClick={handleRequestReturn} disabled={updateStatus.isPending} className="text-amber-600 border-amber-200">
+                Request Return / Refund
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" asChild>
+              <a href="#" onClick={(e) => { e.preventDefault(); window.print(); }}>
+                Print Invoice
+              </a>
+            </Button>
+          </div>
         </div>
 
         {/* Status Timeline */}
@@ -203,12 +242,37 @@ export default function OrderDetailPage() {
           <div className="space-y-4">
             {/* Delivery Info */}
             <div className="rounded-2xl border bg-card p-6">
-              <h2 className="mb-4 text-lg font-semibold">Delivery Address</h2>
-              <div className="space-y-2 text-sm">
+              <h2 className="mb-4 text-lg font-semibold flex items-center gap-2">
+                <Truck className="h-4 w-4 text-brand-600" />
+                Delivery
+              </h2>
+              <div className="space-y-3 text-sm">
                 <div className="flex items-start gap-2">
                   <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                   <span>{order.deliveryAddress}</span>
                 </div>
+                {delivery ? (
+                  <div className="rounded-xl bg-muted/30 p-3 space-y-2 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Status</span>
+                      <Badge variant={delivery.status === "delivered" ? "success" : delivery.status === "in_transit" ? "info" : "secondary"} className="text-[11px]">
+                        {delivery.status}
+                      </Badge>
+                    </div>
+                    {delivery.currentLat && delivery.currentLng && (
+                      <p className="flex items-center gap-1 text-muted-foreground">
+                        <MapPin className="h-3 w-3" />
+                        Live: {delivery.currentLat.toFixed(4)}, {delivery.currentLng.toFixed(4)}
+                      </p>
+                    )}
+                    {delivery.proofImage && (
+                      <p className="text-brand-600">✓ Proof of delivery attached</p>
+                    )}
+                    {!delivery.currentLat && <p className="text-muted-foreground">Rider assigned — tracking will appear when delivery starts.</p>}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Delivery info will appear once rider is assigned.</p>
+                )}
               </div>
             </div>
 

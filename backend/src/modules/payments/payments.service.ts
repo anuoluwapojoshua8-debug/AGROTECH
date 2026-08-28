@@ -234,4 +234,46 @@ export class PaymentsService {
       },
     };
   }
+
+  async handlePaystackWebhook(body: any, signature?: string) {
+    const secret = process.env.PAYSTACK_SECRET_KEY || '';
+    // Verify signature if provided
+    if (signature && secret) {
+      const crypto = await import('crypto');
+      const hash = crypto.createHmac('sha512', secret).update(JSON.stringify(body)).digest('hex');
+      if (hash !== signature) {
+        this.logger.warn('Paystack webhook signature mismatch');
+      }
+    }
+    const event = body?.event;
+    const data = body?.data;
+    if (event === 'charge.success' && data?.reference) {
+      const reference = data.reference;
+      this.logger.log(`Paystack webhook: charge.success ${reference}`);
+      try {
+        await this.verifyPayment(reference, 'PAYSTACK');
+      } catch (e: any) {
+        this.logger.error(`Webhook verify failed for ${reference}: ${e.message}`);
+      }
+    }
+    return { received: true };
+  }
+
+  async handleFlutterwaveWebhook(body: any, verifHash?: string) {
+    const secretHash = process.env.FLUTTERWAVE_SECRET_HASH || process.env.FLUTTERWAVE_SECRET_KEY || '';
+    if (verifHash && secretHash && verifHash !== secretHash) {
+      this.logger.warn('Flutterwave webhook verif-hash mismatch');
+    }
+    const data = body?.data || body;
+    const txRef = data?.tx_ref || data?.txRef || body?.tx_ref;
+    if (txRef) {
+      this.logger.log(`Flutterwave webhook: ${txRef}`);
+      try {
+        await this.verifyPayment(txRef, 'FLUTTERWAVE');
+      } catch (e: any) {
+        this.logger.error(`Flutterwave webhook verify failed for ${txRef}: ${e.message}`);
+      }
+    }
+    return { received: true };
+  }
 }

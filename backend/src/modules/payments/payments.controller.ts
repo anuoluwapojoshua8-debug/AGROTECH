@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, Query, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Query, UseGuards, HttpCode, HttpStatus, Req, Headers } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
@@ -52,5 +52,21 @@ export class PaymentsController {
   @ApiOperation({ summary: 'Refund payment (Admin)' })
   async refund(@Param('orderId') orderId: string) {
     return this.paymentsService.refundPayment(orderId);
+  }
+
+  @Public()
+  @Post('webhook/paystack')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Paystack webhook — auto-verify payment' })
+  async paystackWebhook(@Body() body: any, @Headers('x-paystack-signature') signature: string) {
+    return this.paymentsService.handlePaystackWebhook(body, signature);
+  }
+
+  @Public()
+  @Post('webhook/flutterwave')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Flutterwave webhook — auto-verify payment' })
+  async flutterwaveWebhook(@Body() body: any, @Headers('verif-hash') verifHash: string) {
+    return this.paymentsService.handleFlutterwaveWebhook(body, verifHash);
   }
 }

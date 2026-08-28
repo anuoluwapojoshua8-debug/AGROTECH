@@ -7,6 +7,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { UserRole } from '@prisma/client';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class AuthService {
@@ -16,6 +17,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly mailService: MailService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -156,7 +158,6 @@ export class AuthService {
     if (!user) return { message: 'If the email exists, a reset link has been sent' };
 
     const resetToken = uuidv4();
-    const resetExpires = new Date(Date.now() + 3600000);
 
     await this.prisma.user.update({
       where: { id: user.id },
@@ -165,7 +166,14 @@ export class AuthService {
       },
     });
 
-    this.logger.log(`Password reset token for ${email}: ${resetToken}`);
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
+    const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
+    try {
+      await this.mailService.sendPasswordResetEmail(user.email, resetUrl, user.firstName);
+    } catch (e: any) {
+      this.logger.warn(`Failed to send reset email: ${e.message}`);
+    }
+    this.logger.log(`Password reset link for ${email}: ${resetUrl}`);
 
     return { message: 'If the email exists, a reset link has been sent' };
   }
@@ -194,13 +202,13 @@ export class AuthService {
     const payload = { sub: userId, email, role };
 
     const accessToken = this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('JWT_ACCESS_SECRET', 'agrotech-access-secret'),
-      expiresIn: '15m',
+      secret: this.configService.get<string>('JWT_SECRET', this.configService.get<string>('JWT_ACCESS_SECRET', 'agrotech-access-secret')),
+      expiresIn: this.configService.get<string>('JWT_EXPIRES_IN', '15m'),
     });
 
     const refreshToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_REFRESH_SECRET', 'agrotech-refresh-secret'),
-      expiresIn: '7d',
+      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d'),
     });
 
     return {

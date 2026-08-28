@@ -8,7 +8,7 @@ import { useUIStore } from "@/store/ui-store";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { adminNav, sellerNav, buyerNav } from "@/config/navigation";
+import { adminNav, sellerNav, buyerNav, riderNav } from "@/config/navigation";
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -28,6 +28,8 @@ import {
   X,
   Bell,
   Tag,
+  Truck,
+  Gift,
 } from "lucide-react";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -46,6 +48,8 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Headphones,
   Bell,
   Tag,
+  Truck,
+  Gift,
 };
 
 function DynamicIcon({ name, className }: { name: string; className?: string }) {
@@ -54,7 +58,7 @@ function DynamicIcon({ name, className }: { name: string; className?: string }) 
 }
 
 interface SidebarProps {
-  role: "admin" | "seller" | "buyer";
+  role: "admin" | "seller" | "buyer" | "rider";
 }
 
 export function Sidebar({ role }: SidebarProps) {
@@ -62,7 +66,7 @@ export function Sidebar({ role }: SidebarProps) {
   const { user, logout } = useAuthStore();
   const { sidebarOpen, setSidebarOpen } = useUIStore();
 
-  const navItems = role === "admin" ? adminNav : role === "seller" ? sellerNav : buyerNav;
+  const navItems = role === "admin" ? adminNav : role === "seller" ? sellerNav : role === "rider" ? riderNav : buyerNav;
 
   return (
     <>

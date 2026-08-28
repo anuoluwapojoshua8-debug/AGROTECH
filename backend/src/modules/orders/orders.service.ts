@@ -235,7 +235,7 @@ export class OrdersService {
         PROCESSING: ['DISPATCHED', 'CANCELLED'],
         DISPATCHED: ['IN_TRANSIT'],
         IN_TRANSIT: ['DELIVERED'],
-        DELIVERED: [],
+        DELIVERED: ['RETURNED'],
         CANCELLED: [],
         RETURNED: [],
       };

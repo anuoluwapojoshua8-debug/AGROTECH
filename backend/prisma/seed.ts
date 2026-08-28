@@ -216,7 +216,7 @@ async function main() {
         comparePrice: Math.round(p.price * 1.2),
         quantity: Math.floor(Math.random() * 80) + 20,
         unit: p.unit,
-        images: [],
+        images: [`https://picsum.photos/seed/${p.slug}/600/600`, `https://picsum.photos/seed/${p.slug}-2/600/600`],
         tags: p.tags,
         status: ProductStatus.ACTIVE,
         rating: +(3.5 + Math.random() * 1.5).toFixed(1),
