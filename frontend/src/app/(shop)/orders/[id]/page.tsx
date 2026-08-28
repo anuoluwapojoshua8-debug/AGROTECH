@@ -1,16 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Package, Truck, CheckCircle, Clock, MapPin, CreditCard } from "lucide-react";
+import { ArrowLeft, Package, Truck, CheckCircle, Clock, MapPin, CreditCard, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { PageLoading } from "@/components/shared/loading";
 import { useOrder } from "@/hooks/use-orders";
+import { useCreateReview } from "@/hooks/use-reviews";
 import { formatPrice, formatDateTime } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const statusOrder = ["PENDING", "CONFIRMED", "PROCESSING", "DISPATCHED", "IN_TRANSIT", "DELIVERED"];
 
@@ -22,6 +25,60 @@ const statusIcons: Record<string, any> = {
   IN_TRANSIT: Truck,
   DELIVERED: CheckCircle,
 };
+
+function ReviewButton({ productId, orderId, orderNumber }: { productId: string; orderId: string; orderNumber: string }) {
+  const [open, setOpen] = useState(false);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
+  const createReview = useCreateReview();
+
+  const handleSubmit = async () => {
+    try {
+      await createReview.mutateAsync({ productId, orderId, rating, comment });
+      toast.success("Review submitted!", { description: "Thanks for your feedback." });
+      setOpen(false);
+      setComment("");
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || "Failed to submit review");
+    }
+  };
+
+  if (open) {
+    return (
+      <div className="rounded-xl border bg-muted/20 p-3 space-y-3">
+        <div className="flex gap-1">
+          {[1, 2, 3, 4, 5].map((s) => (
+            <button key={s} onClick={() => setRating(s)} className="p-0.5">
+              <Star className={`h-5 w-5 ${s <= rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`} />
+            </button>
+          ))}
+        </div>
+        <textarea
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          placeholder="Share your experience..."
+          rows={2}
+          className="w-full rounded-lg border bg-background p-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+        <div className="flex gap-2">
+          <Button size="sm" onClick={handleSubmit} loading={createReview.isPending}>
+            Submit
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => setOpen(true)}>
+      <Star className="h-3 w-3" />
+      Review
+    </Button>
+  );
+}
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -110,26 +167,36 @@ export default function OrderDetailPage() {
             <h2 className="mb-4 text-lg font-semibold">Items</h2>
             <div className="space-y-4">
               {order.items.map((item, i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl">
-                    <Image
-                      src={item.productImage || "/placeholder.svg"}
-                      alt={item.productName}
-                      fill
-                      className="object-cover"
-                      sizes="64px"
-                    />
+                <div key={i} className="space-y-2">
+                  <div className="flex items-center gap-4">
+                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl">
+                      <Image
+                        src={item.productImage || "/placeholder.svg"}
+                        alt={item.productName}
+                        fill
+                        className="object-cover"
+                        sizes="64px"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <Link href={`/products/${item.productId}`} className="font-medium hover:text-brand-600">
+                        {item.productName}
+                      </Link>
+                      <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="font-medium">{formatPrice(item.totalPrice)}</span>
+                      {order.status === "DELIVERED" && (
+                        <ReviewButton productId={item.productId} orderId={order.id} orderNumber={order.orderNumber} />
+                      )}
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <Link href={`/products/${item.productId}`} className="font-medium hover:text-brand-600">
-                      {item.productName}
-                    </Link>
-                    <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
-                  </div>
-                  <span className="font-medium">{formatPrice(item.totalPrice)}</span>
                 </div>
               ))}
             </div>
+            {order.status === "DELIVERED" && (
+              <p className="mt-4 text-xs text-muted-foreground">Loved your order? Leave a review for each item.</p>
+            )}
           </div>
 
           {/* Details */}

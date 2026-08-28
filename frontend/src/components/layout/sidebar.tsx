@@ -26,6 +26,8 @@ import {
   Leaf,
   LogOut,
   X,
+  Bell,
+  Tag,
 } from "lucide-react";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -42,6 +44,8 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   BarChart3,
   Image,
   Headphones,
+  Bell,
+  Tag,
 };
 
 function DynamicIcon({ name, className }: { name: string; className?: string }) {

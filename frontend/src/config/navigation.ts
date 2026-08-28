@@ -18,6 +18,7 @@ export const mainNav: NavItem[] = [
 export const buyerNav: NavItem[] = [
   { title: "Dashboard", href: "/dashboard/buyer", icon: "LayoutDashboard" },
   { title: "My Orders", href: "/dashboard/buyer/orders", icon: "ShoppingBag" },
+  { title: "Notifications", href: "/dashboard/notifications", icon: "Bell" },
   { title: "Addresses", href: "/dashboard/buyer/addresses", icon: "MapPin" },
   { title: "Support", href: "/dashboard/buyer/support", icon: "Headphones" },
   { title: "Settings", href: "/dashboard/buyer/settings", icon: "Settings" },
@@ -29,6 +30,7 @@ export const sellerNav: NavItem[] = [
   { title: "Orders", href: "/dashboard/seller/orders", icon: "ShoppingBag" },
   { title: "Earnings", href: "/dashboard/seller/earnings", icon: "Wallet" },
   { title: "Withdrawal", href: "/dashboard/seller/withdrawal", icon: "Banknote" },
+  { title: "Notifications", href: "/dashboard/notifications", icon: "Bell" },
   { title: "Settings", href: "/dashboard/seller/settings", icon: "Settings" },
 ];
 
@@ -39,7 +41,9 @@ export const adminNav: NavItem[] = [
   { title: "Products", href: "/dashboard/admin/products", icon: "Package" },
   { title: "Orders", href: "/dashboard/admin/orders", icon: "ShoppingBag" },
   { title: "Transactions", href: "/dashboard/admin/transactions", icon: "CreditCard" },
+  { title: "Coupons", href: "/dashboard/admin/coupons", icon: "Tag" },
   { title: "Analytics", href: "/dashboard/admin/analytics", icon: "BarChart3" },
   { title: "Banners", href: "/dashboard/admin/banners", icon: "Image" },
   { title: "Support", href: "/dashboard/admin/support", icon: "Headphones" },
+  { title: "Notifications", href: "/dashboard/notifications", icon: "Bell" },
 ];
