@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Search } from "lucide-react";
+import { Search, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,6 +21,9 @@ export default function SearchPage() {
   const query = searchParams.get("q") || "";
   const [searchQuery, setSearchQuery] = useState(query);
   const [sort, setSort] = useState("popular");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     setSearchQuery(query);
@@ -28,9 +31,10 @@ export default function SearchPage() {
 
   const { data: searchResults, isLoading } = query
     ? useSearchProducts(query)
-    : useProducts({ sort, limit: 50 });
+    : useProducts({ sort, limit: 50, minPrice: minPrice ? Number(minPrice) : undefined, maxPrice: maxPrice ? Number(maxPrice) : undefined });
 
-  const results = query ? searchResults : (searchResults as any)?.items || [];
+  const rawResults: any = searchResults;
+  const results = query ? rawResults : rawResults?.items || [];
 
   const resultCount = Array.isArray(results) ? results.length : 0;
 
@@ -65,7 +69,7 @@ export default function SearchPage() {
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">
             {query ? (
               <>Results for "<strong className="text-foreground">{query}</strong>"</>
@@ -74,18 +78,33 @@ export default function SearchPage() {
             )}
             <span className="ml-1">({resultCount})</span>
           </p>
-          <Select value={sort} onValueChange={setSort}>
-            <SelectTrigger className="w-[160px] h-9">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="popular">Most Popular</SelectItem>
-              <SelectItem value="newest">Newest</SelectItem>
-              <SelectItem value="price-asc">Price: Low to High</SelectItem>
-              <SelectItem value="price-desc">Price: High to Low</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className="gap-1">
+              <SlidersHorizontal className="h-4 w-4" />
+              Filters
+            </Button>
+            <Select value={sort} onValueChange={setSort}>
+              <SelectTrigger className="w-[160px] h-9">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="popular">Most Popular</SelectItem>
+                <SelectItem value="newest">Newest</SelectItem>
+                <SelectItem value="price-asc">Price: Low to High</SelectItem>
+                <SelectItem value="price-desc">Price: High to Low</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
+        {showFilters && (
+          <div className="mb-6 flex flex-wrap gap-3 rounded-xl border bg-muted/20 p-4">
+            <Input placeholder="Min price" type="number" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} className="w-32" />
+            <Input placeholder="Max price" type="number" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} className="w-32" />
+            <Button variant="ghost" size="sm" onClick={() => { setMinPrice(""); setMaxPrice(""); }}>
+              Clear
+            </Button>
+          </div>
+        )}
 
         <ProductGrid products={Array.isArray(results) ? results : []} isLoading={isLoading} />
       </div>

@@ -30,6 +30,7 @@ import {
   Tag,
   Truck,
   Gift,
+  Shield,
 } from "lucide-react";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -50,6 +51,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Tag,
   Truck,
   Gift,
+  Shield,
 };
 
 function DynamicIcon({ name, className }: { name: string; className?: string }) {

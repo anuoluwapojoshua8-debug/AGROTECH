@@ -44,10 +44,12 @@ export const adminNav: NavItem[] = [
   { title: "Products", href: "/dashboard/admin/products", icon: "Package" },
   { title: "Orders", href: "/dashboard/admin/orders", icon: "ShoppingBag" },
   { title: "Transactions", href: "/dashboard/admin/transactions", icon: "CreditCard" },
+  { title: "Deliveries", href: "/dashboard/admin/deliveries", icon: "Truck" },
   { title: "Coupons", href: "/dashboard/admin/coupons", icon: "Tag" },
   { title: "Analytics", href: "/dashboard/admin/analytics", icon: "BarChart3" },
   { title: "Banners", href: "/dashboard/admin/banners", icon: "Image" },
   { title: "Support", href: "/dashboard/admin/support", icon: "Headphones" },
+  { title: "Audit Logs", href: "/dashboard/admin/audit-logs", icon: "Shield" },
   { title: "Notifications", href: "/dashboard/notifications", icon: "Bell" },
 ];
 

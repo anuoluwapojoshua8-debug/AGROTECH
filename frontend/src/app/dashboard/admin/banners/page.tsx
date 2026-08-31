@@ -73,8 +73,21 @@ export default function AdminBannersPage() {
                 <Input placeholder="Banner subtitle" value={form.subtitle} onChange={(e) => setForm({ ...form, subtitle: e.target.value })} />
               </div>
               <div>
-                <Label>Image URL</Label>
+                <Label>Image URL or Upload</Label>
                 <Input placeholder="https://..." value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} />
+                <Input type="file" accept="image/*" className="mt-2" onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const fd = new FormData();
+                  fd.append("file", file);
+                  fd.append("folder", "banners");
+                  try {
+                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1"}/upload/single`, { method: "POST", body: fd, headers: { Authorization: `Bearer ${localStorage.getItem("accessToken") || ""}` } });
+                    const json = await res.json();
+                    const url = json?.data?.secure_url || json?.secure_url;
+                    if (url) setForm({ ...form, imageUrl: url });
+                  } catch {}
+                }} />
               </div>
               <div>
                 <Label>Link URL (optional)</Label>
