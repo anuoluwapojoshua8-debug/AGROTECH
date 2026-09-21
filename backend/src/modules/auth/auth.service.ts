@@ -8,6 +8,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { UserRole } from '@prisma/client';
 import { MailService } from '../mail/mail.service';
+import { OtpService } from '../otp/otp.service';
 
 @Injectable()
 export class AuthService {

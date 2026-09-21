@@ -25,6 +25,8 @@ import { ReferralsModule } from './modules/referrals/referrals.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { SupportModule } from './modules/support/support.module';
 import { MailModule } from './modules/mail/mail.module';
+import { SmsModule } from './modules/sms/sms.module';
+import { OtpModule } from './modules/otp/otp.module';
 
 @Module({
   controllers: [AppController],
@@ -59,6 +61,8 @@ import { MailModule } from './modules/mail/mail.module';
     AnalyticsModule,
     SupportModule,
     MailModule,
+    SmsModule,
+    OtpModule,
   ],
 })
 export class AppModule {}

@@ -43,10 +43,23 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterInput) => {
     try {
       await registerMutation.mutateAsync(data);
-      toast.success("Account created!", {
-        description: "Welcome to AgroTech. Start shopping fresh produce.",
+      toast.success("Account created! Verify your Gmail/SMS.", {
+        description: `Code sent to ${data.email} / ${data.phone}. Check Gmail & SMS.`,
       });
-      router.push("/");
+      // Try to trigger OTP sends (non-blocking)
+      try {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1"}/otp/send`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: data.email, channel: "email" }),
+        }).catch(() => {});
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1"}/otp/send`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: data.phone, channel: "sms" }),
+        }).catch(() => {});
+      } catch {}
+      router.push(`/verify?email=${encodeURIComponent(data.email)}&phone=${encodeURIComponent(data.phone)}`);
     } catch (error: any) {
       toast.error("Registration failed", {
         description: error?.response?.data?.message || "Something went wrong. Try again.",

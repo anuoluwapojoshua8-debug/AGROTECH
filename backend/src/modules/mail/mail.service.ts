@@ -83,4 +83,25 @@ export class MailService {
     `;
     return this.sendMail(to, subject, html);
   }
+
+  async sendOtpEmail(to: string, code: string, userName?: string) {
+    const subject = `${code} — Your AgroTech verification code`;
+    const html = `
+      <div style="font-family:Inter,Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#f9fafb;border-radius:16px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+          <div style="width:36px;height:36px;background:#0a7a3c;border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-weight:700">A</div>
+          <span style="font-size:20px;font-weight:700">Agro<span style="color:#0a7a3c">Tech</span></span>
+        </div>
+        <h2 style="color:#111827">Hi ${userName || 'there'},</h2>
+        <p style="color:#4b5563;line-height:1.6">Your AgroTech verification code is:</p>
+        <div style="margin:20px 0;padding:16px;background:white;border:2px dashed #0a7a3c;border-radius:12px;text-align:center">
+          <span style="font-size:32px;letter-spacing:8px;font-weight:800;color:#0a7a3c">${code}</span>
+        </div>
+        <p style="color:#6b7280;font-size:13px">This code expires in <strong>5 minutes</strong>. If you didn't request this, ignore this email.</p>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0"/>
+        <p style="color:#9ca3af;font-size:12px;text-align:center">© ${new Date().getFullYear()} AgroTech Marketplace</p>
+      </div>
+    `;
+    return this.sendMail(to, subject, html, `Your AgroTech code is ${code} — expires in 5 minutes.`);
+  }
 }
