@@ -40,7 +40,16 @@ export interface AdminMerchant {
   businessName: string;
   status: string;
   createdAt: string;
-  user: { firstName: string; lastName: string; email: string };
+  businessAddress?: string;
+  businessPhone?: string;
+  description?: string;
+  idDocument?: string | null;
+  idDocumentType?: string | null;
+  businessDocuments?: string[];
+  bvn?: string | null;
+  taxId?: string | null;
+  produceTypes?: string[];
+  user: { firstName: string; lastName: string; email: string; phone?: string };
   _count: { products: number };
 }
 

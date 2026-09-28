@@ -1,10 +1,17 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../database/prisma.service';
+import { PaystackProvider } from '../payments/providers/paystack.provider';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class WalletService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(WalletService.name);
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+    private readonly paystackProvider: PaystackProvider,
+  ) {}
 
   async getWallet(userId: string) {
     let wallet = await this.prisma.wallet.findUnique({
@@ -65,6 +72,26 @@ export class WalletService {
     ]);
 
     return { balance: updated.balance, reference: ref };
+  }
+
+  async fundWalletViaPaystack(userId: string, amount: number, reference?: string) {
+    if (amount <= 0) throw new BadRequestException('Amount must be positive');
+    const paystackKey = this.configService.get<string>('PAYSTACK_SECRET_KEY');
+    if (paystackKey) {
+      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+      if (!user) throw new NotFoundException('User not found');
+      const ref = reference || `WAL-FUND-${uuidv4().slice(0, 8).toUpperCase()}`;
+      try {
+        const init = await this.paystackProvider.initializePayment(user.email, amount, ref, {
+          userId,
+          walletFunding: true,
+        });
+        return { type: 'paystack', authorizationUrl: init.authorizationUrl, reference: ref };
+      } catch (e: any) {
+        this.logger.warn(`Paystack init failed, falling back to direct fund: ${e.message}`);
+      }
+    }
+    return this.fundWallet(userId, amount, reference);
   }
 
   async payFromWallet(userId: string, amount: number, description?: string) {

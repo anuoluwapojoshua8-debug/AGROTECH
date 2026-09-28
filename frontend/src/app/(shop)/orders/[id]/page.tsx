@@ -15,6 +15,7 @@ import { useDeliveryByOrder } from "@/hooks/use-delivery";
 import { formatPrice, formatDateTime } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { DeliveryMap } from "@/components/delivery/delivery-map";
 
 const statusOrder = ["PENDING", "CONFIRMED", "PROCESSING", "DISPATCHED", "IN_TRANSIT", "DELIVERED"];
 
@@ -252,26 +253,32 @@ export default function OrderDetailPage() {
                   <span>{order.deliveryAddress}</span>
                 </div>
                 {delivery ? (
-                  <div className="rounded-xl bg-muted/30 p-3 space-y-2 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Status</span>
-                      <Badge variant={delivery.status === "delivered" ? "success" : delivery.status === "in_transit" ? "info" : "secondary"} className="text-[11px]">
-                        {delivery.status}
-                      </Badge>
+                  <div className="space-y-3">
+                    <div className="rounded-xl bg-muted/30 p-3 space-y-2 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Status</span>
+                        <Badge variant={delivery.status === "delivered" ? "success" : delivery.status === "in_transit" ? "info" : "secondary"} className="text-[11px]">
+                          {delivery.status}
+                        </Badge>
+                      </div>
+                      {delivery.proofImage && <p className="text-brand-600">✓ Proof of delivery attached</p>}
+                      {!delivery.currentLat && <p className="text-muted-foreground">Rider assigned — tracking will appear when delivery starts.</p>}
                     </div>
-                    {delivery.currentLat && delivery.currentLng && (
-                      <p className="flex items-center gap-1 text-muted-foreground">
-                        <MapPin className="h-3 w-3" />
-                        Live: {delivery.currentLat.toFixed(4)}, {delivery.currentLng.toFixed(4)}
-                      </p>
-                    )}
-                    {delivery.proofImage && (
-                      <p className="text-brand-600">✓ Proof of delivery attached</p>
-                    )}
-                    {!delivery.currentLat && <p className="text-muted-foreground">Rider assigned — tracking will appear when delivery starts.</p>}
+                    <DeliveryMap
+                      deliveryLat={order.deliveryLat}
+                      deliveryLng={order.deliveryLng}
+                      currentLat={delivery.currentLat}
+                      currentLng={delivery.currentLng}
+                      pickupLat={delivery.pickupLat}
+                      pickupLng={delivery.pickupLng}
+                      orderNumber={order.orderNumber}
+                    />
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground">Delivery info will appear once rider is assigned.</p>
+                  <>
+                    <p className="text-xs text-muted-foreground mb-3">Delivery info will appear once rider is assigned.</p>
+                    <DeliveryMap deliveryLat={order.deliveryLat} deliveryLng={order.deliveryLng} orderNumber={order.orderNumber} />
+                  </>
                 )}
               </div>
             </div>

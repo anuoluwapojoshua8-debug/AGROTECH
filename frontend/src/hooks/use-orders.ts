@@ -23,6 +23,8 @@ export interface Order {
   paymentStatus?: string;
   paymentMethod?: string;
   deliveryAddress: string;
+  deliveryLat?: number;
+  deliveryLng?: number;
   note?: string;
   createdAt: string;
   updatedAt: string;

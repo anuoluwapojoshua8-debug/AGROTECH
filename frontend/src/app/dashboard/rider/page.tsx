@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/shared/empty-state";
 import { formatDateTime, formatPrice } from "@/lib/utils";
-import { useRiderDeliveries, useStartDelivery, useMarkDelivered } from "@/hooks/use-delivery";
+import { useRiderDeliveries, useStartDelivery, useMarkDelivered, useUpdateDeliveryLocation } from "@/hooks/use-delivery";
+import { DeliveryMap } from "@/components/delivery/delivery-map";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -17,6 +18,8 @@ export default function RiderDashboardPage() {
   const { data, isLoading } = useRiderDeliveries(1, status);
   const start = useStartDelivery();
   const deliver = useMarkDelivered();
+  const updateLoc = useUpdateDeliveryLocation();
+  const [sharing, setSharing] = useState<string | null>(null);
 
   const deliveries = data?.items ?? [];
 
@@ -35,6 +38,30 @@ export default function RiderDashboardPage() {
     } catch (e: any) {
       toast.error(e?.response?.data?.message || "Failed");
     }
+  };
+  const handleShareLocation = async (orderId: string) => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation not supported");
+      return;
+    }
+    setSharing(orderId);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          await updateLoc.mutateAsync({ orderId, lat: pos.coords.latitude, lng: pos.coords.longitude });
+          toast.success(`Live location shared: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`);
+        } catch (e: any) {
+          toast.error(e?.response?.data?.message || "Failed to share location");
+        } finally {
+          setSharing(null);
+        }
+      },
+      () => {
+        toast.error("Failed to get location — allow GPS");
+        setSharing(null);
+      },
+      { enableHighAccuracy: true }
+    );
   };
 
   return (
@@ -89,7 +116,8 @@ export default function RiderDashboardPage() {
                     </span>
                   )}
                 </div>
-                <div className="flex gap-2">
+                <DeliveryMap currentLat={d.currentLat} currentLng={d.currentLng} deliveryLat={d.dropoffLat} deliveryLng={d.dropoffLng} orderNumber={d.order?.orderNumber} />
+                <div className="flex gap-2 flex-wrap">
                   <Button variant="outline" size="sm" asChild>
                     <Link href={`/orders/${d.orderId}`}>View Order</Link>
                   </Button>
@@ -99,10 +127,16 @@ export default function RiderDashboardPage() {
                     </Button>
                   )}
                   {d.status === "in_transit" && (
-                    <Button size="sm" onClick={() => handleDeliver(d.orderId)} loading={deliver.isPending} className="gap-1">
-                      <CheckCircle className="h-4 w-4" />
-                      Mark Delivered
-                    </Button>
+                    <>
+                      <Button size="sm" variant="outline" onClick={() => handleShareLocation(d.orderId)} disabled={sharing === d.orderId || updateLoc.isPending} className="gap-1">
+                        <Navigation className="h-4 w-4" />
+                        {sharing === d.orderId ? "Sharing..." : "Share live location"}
+                      </Button>
+                      <Button size="sm" onClick={() => handleDeliver(d.orderId)} loading={deliver.isPending} className="gap-1">
+                        <CheckCircle className="h-4 w-4" />
+                        Mark Delivered
+                      </Button>
+                    </>
                   )}
                 </div>
               </CardContent>

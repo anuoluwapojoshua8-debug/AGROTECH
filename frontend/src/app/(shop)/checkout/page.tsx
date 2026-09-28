@@ -14,6 +14,9 @@ import { useCreateOrder } from "@/hooks/use-orders";
 import { useValidateCoupon } from "@/hooks/use-coupons";
 import { formatPrice, cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import apiClient from "@/lib/api-client";
+import Link from "next/link";
 
 const paymentMethods = [
   { value: "PAYSTACK", label: "Paystack", icon: Wallet, desc: "Pay with card, bank transfer or USSD" },
@@ -29,16 +32,32 @@ export default function CheckoutPage() {
   const [notes, setNotes] = useState("");
   const [promoCode, setPromoCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountAmount: number; discountType: string; discountValue: number } | null>(null);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const createOrder = useCreateOrder();
   const validateCoupon = useValidateCoupon();
+
+  const { data: addresses } = useQuery({
+    queryKey: ["addresses-checkout"],
+    queryFn: async () => {
+      const res = await apiClient.get("/users/addresses");
+      return (res.data as any)?.data as any[] || res.data;
+    },
+  });
+
+  const selectedAddr = (addresses || []).find((a: any) => a.id === selectedAddressId);
 
   const deliveryFee = subtotal() >= 15000 ? 0 : 1500;
   const discount = appliedCoupon?.discountAmount || 0;
   const total = subtotal() + deliveryFee - discount;
 
-  const deliveryAddress = location.label
+  const deliveryAddress = selectedAddr
+    ? `${selectedAddr.street}, ${selectedAddr.city}, ${selectedAddr.state} (${selectedAddr.label}) - ${selectedAddr.phone}`
+    : location.label
     ? `${location.label}${location.deliveryAddress ? ", " + location.deliveryAddress : ""}${location.city ? ", " + location.city : ""}${location.state ? ", " + location.state : ""}`
     : "Delivery location not set";
+
+  const deliveryLat = selectedAddr?.lat ?? location.lat;
+  const deliveryLng = selectedAddr?.lng ?? location.lng;
 
   const handleApplyPromo = async () => {
     if (!promoCode.trim()) return;
@@ -61,13 +80,17 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = async () => {
+    if (deliveryAddress === "Delivery location not set") {
+      toast.error("Please select an address or set delivery location");
+      return;
+    }
     try {
       await createOrder.mutateAsync({
         deliveryAddress,
         note: notes || undefined,
         paymentMethod,
-        deliveryLat: location.lat,
-        deliveryLng: location.lng,
+        deliveryLat,
+        deliveryLng,
         couponCode: appliedCoupon?.code,
       });
       clearCart();
@@ -102,24 +125,54 @@ export default function CheckoutPage() {
 
         <div className="grid gap-8 lg:grid-cols-3">
           <div className="space-y-8 lg:col-span-2">
-            {/* Delivery Location */}
+            {/* Delivery Location — Saved Addresses */}
             <div className="rounded-2xl border bg-card p-6">
-              <h2 className="mb-4 text-lg font-semibold">Delivery Location</h2>
+              <h2 className="mb-4 text-lg font-semibold">Delivery Address</h2>
+              {(addresses || []).length > 0 ? (
+                <div className="space-y-2 mb-4">
+                  {(addresses || []).map((addr: any) => (
+                    <label
+                      key={addr.id}
+                      className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-3 transition-all ${selectedAddressId === addr.id ? "border-brand-600 bg-brand-50 dark:bg-brand-950" : "border-border"}`}
+                    >
+                      <input
+                        type="radio"
+                        name="checkout-address"
+                        checked={selectedAddressId === addr.id}
+                        onChange={() => setSelectedAddressId(addr.id)}
+                        className="mt-1"
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-brand-600" />
+                          {addr.label} {addr.isDefault && <span className="text-xs bg-brand-600 text-white px-1.5 py-0.5 rounded">Default</span>}
+                        </p>
+                        <p className="text-sm text-muted-foreground">{addr.street}, {addr.city}, {addr.state}</p>
+                        <p className="text-xs text-muted-foreground">{addr.phone}</p>
+                      </div>
+                    </label>
+                  ))}
+                  <label className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 ${!selectedAddressId ? "border-brand-600 bg-brand-50 dark:bg-brand-950" : "border-border"}`}>
+                    <input type="radio" name="checkout-address" checked={!selectedAddressId} onChange={() => setSelectedAddressId(null)} />
+                    <span className="text-sm font-medium">Use map location</span>
+                  </label>
+                </div>
+              ) : (
+                <p className="mb-4 text-sm text-muted-foreground">
+                  No saved addresses. <Link href="/dashboard/buyer/addresses" className="text-brand-600 underline">Add one</Link> or use map below.
+                </p>
+              )}
               <div className="flex items-center gap-3 rounded-xl border p-4">
                 <MapPin className="h-5 w-5 text-brand-600 shrink-0" />
                 <div>
                   <p className="text-sm font-medium">{deliveryAddress}</p>
-                  {location.lat !== undefined && location.lng !== undefined && (
-                    <p className="text-xs text-muted-foreground">
-                      Coordinates: {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
-                    </p>
+                  {deliveryLat !== undefined && deliveryLng !== undefined && (
+                    <p className="text-xs text-muted-foreground">Coordinates: {Number(deliveryLat).toFixed(4)}, {Number(deliveryLng).toFixed(4)}</p>
                   )}
                 </div>
               </div>
-              {(!location.lat || !location.lng) && (
-                <p className="mt-2 text-xs text-amber-600">
-                  Please set your delivery location from the map before placing your order.
-                </p>
+              {(!deliveryLat || !deliveryLng) && !selectedAddressId && (
+                <p className="mt-2 text-xs text-amber-600">Please select an address or set delivery location from map.</p>
               )}
             </div>
 

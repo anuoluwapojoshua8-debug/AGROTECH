@@ -83,18 +83,21 @@ export class PaymentsService {
         data: { status: 'PAID' },
       });
 
-      await this.prisma.order.update({
-        where: { id: payment.orderId },
-        data: {
-          paymentStatus: 'PAID',
-          paymentMethod: payment.method,
-          status: 'CONFIRMED',
-        },
-      });
+      if (payment.orderId) {
+        await this.prisma.order.update({
+          where: { id: payment.orderId },
+          data: {
+            paymentStatus: 'PAID',
+            paymentMethod: payment.method,
+            status: 'CONFIRMED',
+          },
+        });
+      }
 
+      const wallet = await this.getBuyerWallet(payment.orderId);
       await this.prisma.walletTransaction.create({
         data: {
-          walletId: (await this.getBuyerWallet(payment.orderId)).id,
+          walletId: wallet.id,
           type: 'debit',
           amount: payment.amount,
           balanceBefore: 0,
@@ -195,7 +198,9 @@ export class PaymentsService {
 
   private async getBuyerWallet(orderId: string) {
     const order = await this.prisma.order.findUnique({ where: { id: orderId } });
-    if (!order) throw new NotFoundException('Order not found');
+    if (!order) {
+      throw new NotFoundException('Order not found for wallet lookup');
+    }
     const wallet = await this.prisma.wallet.findUnique({ where: { userId: order.buyerId } });
     if (!wallet) throw new NotFoundException('Buyer wallet not found');
     return wallet;
@@ -251,12 +256,59 @@ export class PaymentsService {
       const reference = data.reference;
       this.logger.log(`Paystack webhook: charge.success ${reference}`);
       try {
-        await this.verifyPayment(reference, 'PAYSTACK');
+        if (reference.startsWith('WAL-FUND-')) {
+          await this.creditWalletFromPaystackWebhook(reference, data.amount, data.customer?.email || data.email);
+        } else {
+          await this.verifyPayment(reference, 'PAYSTACK');
+        }
       } catch (e: any) {
         this.logger.error(`Webhook verify failed for ${reference}: ${e.message}`);
       }
     }
     return { received: true };
+  }
+
+  async creditWalletFromPaystackWebhook(reference: string, amount: number, userEmail?: string) {
+    const amountInKobo = Math.round(amount / 100);
+
+    let user: import('@prisma/client').User | null = null;
+    if (userEmail) {
+      user = await this.prisma.user.findUnique({ where: { email: userEmail } });
+    }
+    if (!user) {
+      // Fallback: try to find by searching payments with this reference
+      const payment = await this.prisma.payment.findUnique({ where: { transactionRef: reference } });
+      if (payment?.orderId) {
+        const order = await this.prisma.order.findUnique({ where: { id: payment.orderId } });
+        if (order) {
+          user = await this.prisma.user.findUnique({ where: { id: order.buyerId } });
+        }
+      }
+    }
+    if (!user) throw new NotFoundException('User not found for wallet funding webhook');
+
+    const wallet = await this.prisma.wallet.findUnique({ where: { userId: user.id } });
+    if (!wallet) throw new NotFoundException('Wallet not found for user');
+
+    const updatedWallet = await this.prisma.wallet.update({
+      where: { id: wallet.id },
+      data: { balance: { increment: amountInKobo } },
+    });
+
+    await this.prisma.walletTransaction.create({
+      data: {
+        walletId: wallet.id,
+        type: 'funding',
+        amount: amountInKobo,
+        balanceBefore: wallet.balance,
+        balanceAfter: wallet.balance + amountInKobo,
+        reference,
+        description: 'Wallet funding via Paystack',
+        status: 'completed',
+      },
+    });
+
+    return { credited: true, newBalance: updatedWallet.balance, userId: user.id };
   }
 
   async handleFlutterwaveWebhook(body: any, verifHash?: string) {

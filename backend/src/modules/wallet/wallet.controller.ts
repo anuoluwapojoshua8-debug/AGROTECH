@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { WalletService } from './wallet.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -27,9 +27,9 @@ export class WalletController {
   }
 
   @Post('fund')
-  @ApiOperation({ summary: 'Fund wallet' })
+  @ApiOperation({ summary: 'Fund wallet via Paystack or direct' })
   async fundWallet(@CurrentUser('id') userId: string, @Body() dto: FundWalletDto) {
-    return this.walletService.fundWallet(userId, dto.amount, dto.reference);
+    return this.walletService.fundWalletViaPaystack(userId, dto.amount, dto.reference);
   }
 
   @Post('pay')
