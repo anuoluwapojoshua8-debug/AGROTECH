@@ -28,6 +28,7 @@ export default function RegisterPage() {
 
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
+    mode: "onChange",
     defaultValues: {
       firstName: "",
       lastName: "",
@@ -39,6 +40,8 @@ export default function RegisterPage() {
       acceptTerms: false,
     },
   });
+
+  const canSubmitRegister = form.formState.isValid && !registerMutation.isPending;
 
   const onSubmit = async (data: RegisterInput) => {
     try {
@@ -258,12 +261,14 @@ export default function RegisterPage() {
 
           <Button
             type="submit"
-            className="w-full"
+            className={`w-full text-base font-semibold transition-all duration-200 ${canSubmitRegister ? "bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-brand-600/20 scale-[1.01]" : "bg-muted text-muted-foreground"}`}
             size="lg"
+            disabled={!canSubmitRegister}
             loading={registerMutation.isPending}
           >
-            Create Account
+            {canSubmitRegister ? "Create Account →" : "Fill all fields to Create Account"}
           </Button>
+          {canSubmitRegister && <p className="text-center text-xs text-brand-600 animate-in fade-in">Ready — tap Create Account</p>}
         </form>
       </Form>
 

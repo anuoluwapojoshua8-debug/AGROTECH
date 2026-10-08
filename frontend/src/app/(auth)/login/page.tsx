@@ -29,8 +29,14 @@ export default function LoginPage() {
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
+    mode: "onChange",
     defaultValues: { email: "", password: "" },
   });
+
+  const emailVal = form.watch("email");
+  const passVal = form.watch("password");
+  const isFilled = !!emailVal?.trim() && !!passVal?.trim() && !loginMutation.isPending;
+  const canSubmit = form.formState.isValid && isFilled;
 
   const onSubmit = async (data: LoginInput) => {
     try {
@@ -128,12 +134,14 @@ export default function LoginPage() {
 
           <Button
             type="submit"
-            className="w-full"
+            className={`w-full text-base font-semibold transition-all duration-200 ${canSubmit ? "bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-brand-600/20 scale-[1.01]" : "bg-muted text-muted-foreground"}`}
             size="lg"
+            disabled={!canSubmit}
             loading={loginMutation.isPending}
           >
-            Sign In
+            {canSubmit ? "Sign In →" : "Enter email & password to Sign In"}
           </Button>
+          {canSubmit && <p className="text-center text-xs text-brand-600 animate-in fade-in">Ready — tap Sign In</p>}
         </form>
       </Form>
 
